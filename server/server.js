@@ -89,6 +89,7 @@ io.on('connection', (socket) => {
 
   // Seat permanent booking broadcast
   socket.on('bookSeats', ({ showId, seatNumbers }) => {
+	console.log(`Broadcasting Booked seats for show ${showId}:`, seatNumbers);
     socket.to(showId).emit('seatsBooked', { seatNumbers });
   });
 

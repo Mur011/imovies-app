@@ -58,13 +58,14 @@ const BookingPage = ({ user }) => {
 
     // Real-time update when another user completes booking
     socket.on('seatsBooked', ({ seatNumbers }) => {
+	  console.log('Received seatsBooked:', seatNumbers);
       setLockedSeats((prev) => prev.filter((s) => !seatNumbers.includes(s)));
       setSelectedShow((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          seats: prev.seats.map((s) =>
-            seatNumbers.includes(s.seatNumber) ? { ...s, status: 'booked' } : s
+          seats: prev.seats.map((seat) =>
+            seatNumbers.includes(seat.seatNumber) ? { ...seat, status: 'booked' } : seat
           )
         };
       });
@@ -200,25 +201,26 @@ const BookingPage = ({ user }) => {
             }}
           >
             {selectedShow.seats.map((seat) => {
-              const isSelected = selectedSeats.includes(seat.seatNumber);
-              const isLocked = lockedSeats.includes(seat.seatNumber);
-              const isBooked = seat.status === 'booked';
+			  const isBooked = seat.status === 'booked';
+              const isLocked = !isBooked && lockedSeats.includes(seat.seatNumber);
+			  const isSelected = selectedSeats.includes(seat.seatNumber);
+              
+              let btnClass = 'btn-outline-dark';
+			  if (isBooked) {
+				btnClass = 'btn-secondary disabled';
+			 } else if (isSelected) {
+				btnClass = 'btn-danger';
+			} else if (isLocked) {
+				btnClass = 'btn-warning';
+			}
 
               return (
                 <button
                   key={seat.seatNumber}
                   disabled={isBooked || isLocked}
                   onClick={() => toggleSeat(seat)}
-                  className={`btn btn-sm ${
-                    isSelected
-                      ? 'btn-danger'
-                      : isBooked
-                      ? 'btn-secondary disabled'
-                      : isLocked
-                      ? 'btn-warning'
-                      : 'btn-outline-dark'
-                  }`}
-                  style={{
+                  className={`btn btn-sm ${btnClass}`}
+                   style={{
                     width: '42px',
                     height: '38px',
                     fontSize: '11px',
