@@ -68,6 +68,7 @@ mongoose.connect(process.env.MONGO_URI)
   .catch((err) => console.error('MongoDB Connection Error:', err));
 
 // Real-Time Seat Synchronization via Socket.io
+// Real-Time Seat Synchronization via Socket.io
 io.on('connection', (socket) => {
   console.log(`Socket client connected: ${socket.id}`);
 
@@ -84,6 +85,11 @@ io.on('connection', (socket) => {
   // Seat release broadcast
   socket.on('releaseSeat', ({ showId, seatNumber }) => {
     socket.to(showId).emit('seatReleased', { seatNumber });
+  });
+
+  // Seat permanent booking broadcast
+  socket.on('bookSeats', ({ showId, seatNumbers }) => {
+    socket.to(showId).emit('seatsBooked', { seatNumbers });
   });
 
   socket.on('disconnect', () => {

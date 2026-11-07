@@ -56,9 +56,24 @@ const BookingPage = ({ user }) => {
       setLockedSeats((prev) => prev.filter((s) => s !== seatNumber));
     });
 
+    // Real-time update when another user completes booking
+    socket.on('seatsBooked', ({ seatNumbers }) => {
+      setLockedSeats((prev) => prev.filter((s) => !seatNumbers.includes(s)));
+      setSelectedShow((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          seats: prev.seats.map((s) =>
+            seatNumbers.includes(s.seatNumber) ? { ...s, status: 'booked' } : s
+          )
+        };
+      });
+    });
+
     return () => {
       socket.off('seatLocked');
       socket.off('seatReleased');
+      socket.off('seatsBooked');
     };
   }, [selectedShow]);
 
@@ -91,7 +106,14 @@ const BookingPage = ({ user }) => {
         totalAmount
       });
 
+      // Broadcast booking to all other connected clients
+      socket.emit('bookSeats', {
+        showId: selectedShow._id,
+        seatNumbers: selectedSeats
+      });
+
       setBookingMessage({ text: 'Booking Confirmed! Enjoy your movie.', type: 'success' });
+
       // Update local seat status
       setSelectedShow((prev) => ({
         ...prev,
@@ -134,7 +156,9 @@ const BookingPage = ({ user }) => {
           />
           <div>
             <h3 className="fw-bold mb-1">{movie.title}</h3>
-            <p className="text-muted mb-0">{movie.genre.join(', ')} • {movie.duration} min • {movie.language}</p>
+            <p className="text-muted mb-0">
+              {movie.genre?.join(', ')} • {movie.duration} min • {movie.language}
+            </p>
           </div>
         </div>
       )}
@@ -180,17 +204,20 @@ const BookingPage = ({ user }) => {
               const isLocked = lockedSeats.includes(seat.seatNumber);
               const isBooked = seat.status === 'booked';
 
-              let btnVariant = 'outline-secondary';
-              if (isBooked) btnVariant = 'secondary';
-              else if (isLocked) btnVariant = 'warning';
-              else if (isSelected) btnVariant = 'danger';
-
               return (
                 <button
                   key={seat.seatNumber}
                   disabled={isBooked || isLocked}
                   onClick={() => toggleSeat(seat)}
-                  className={`btn btn-sm ${isSelected ? 'btn-danger' : isBooked ? 'btn-secondary disabled' : isLocked ? 'btn-warning' : 'btn-outline-dark'}`}
+                  className={`btn btn-sm ${
+                    isSelected
+                      ? 'btn-danger'
+                      : isBooked
+                      ? 'btn-secondary disabled'
+                      : isLocked
+                      ? 'btn-warning'
+                      : 'btn-outline-dark'
+                  }`}
                   style={{
                     width: '42px',
                     height: '38px',
@@ -218,7 +245,9 @@ const BookingPage = ({ user }) => {
           <div className="d-flex justify-content-between align-items-center border-top pt-3">
             <div className="text-start">
               <h6 className="mb-0">Selected: <strong>{selectedSeats.join(', ') || 'None'}</strong></h6>
-              <small className="text-muted">Total: ₹{selectedSeats.length * selectedShow.ticketPrice}</small>
+              <small className="text-muted">
+                Total: ₹{selectedSeats.length * selectedShow.ticketPrice}
+              </small>
             </div>
             <Button
               variant="danger"
